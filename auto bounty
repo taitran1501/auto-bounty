@@ -15,9 +15,13 @@ _G.Settings = {
 -- Load thư viện hỗ trợ
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local CurrentTarget = nil
 
--- Hàm tự động chọn phe Hải Tặc
+-- **Danh sách skill có trong game**
+local SkillKeys = {"Z", "X", "C", "V", "F"}
+
+-- **Hàm tự động chọn phe Hải Tặc**
 function AutoSelectPirates()
     if _G.Settings.AutoSelectPirates then
         local teamSelection = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes"):FindFirstChild("SelectTeam")
@@ -27,7 +31,7 @@ function AutoSelectPirates()
     end
 end
 
--- Hàm tìm người chơi gần nhất
+-- **Hàm tìm người chơi gần nhất**
 function GetNearestPlayer()
     local nearest, distance = nil, math.huge
     for _, player in pairs(Players:GetPlayers()) do
@@ -42,46 +46,43 @@ function GetNearestPlayer()
     return nearest
 end
 
--- Hàm bật PVP nếu bị giết
+-- **Hàm bật PVP nếu bị giết**
 function AutoEnablePVP()
     LocalPlayer.Character.Humanoid.Died:Connect(function()
         if _G.Settings.AutoPVP then
-            game:GetService("VirtualInputManager"):SendKeyEvent(true, "P", false, game)
+            VirtualInputManager:SendKeyEvent(true, "P", false, game)
         end
     end)
 end
 
--- Hàm teleport đến mục tiêu
+-- **Hàm teleport đến mục tiêu**
 function TeleportTo(target)
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
         LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
     end
 end
 
--- Hàm dùng skill + click
-function UseSkills(target)
-    if _G.Settings.UseSkills then
-        local skills = {"Z", "X", "C", "V", "B"}
-        local damageDealt = false
-        for _, key in pairs(skills) do
-            game:GetService("VirtualInputManager"):SendKeyEvent(true, key, false, game)
-            wait(0.2)
-            -- Kiểm tra nếu không gây damage thì đổi mục tiêu
-            if target and target.Character and target.Character:FindFirstChild("Humanoid").Health == target.Character:FindFirstChild("Humanoid").MaxHealth then
-                damageDealt = false
-            else
-                damageDealt = true
-            end
+-- **Hàm tự động sử dụng skill vũ khí đang cầm**
+function AutoUseEquippedWeapons()
+    local Character = LocalPlayer.Character
+    if not Character then return end
+
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if not Humanoid then return end
+
+    local EquippedTool = Humanoid:FindFirstChildOfClass("Tool") -- Lấy vũ khí đang cầm
+    if EquippedTool then
+        print("🛠 Đang dùng:", EquippedTool.Name)
+
+        -- **Spam toàn bộ skill có thể dùng**
+        for _, skill in ipairs(SkillKeys) do
+            VirtualInputManager:SendKeyEvent(true, skill, false, game)
+            wait(0.3) -- Delay nhỏ để tránh bug
         end
-        if not damageDealt then
-            CurrentTarget = GetNearestPlayer() -- Chỉ đổi mục tiêu khi không gây damage
-        end
-        -- Click đánh thường
-        game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
     end
 end
 
--- Hàm auto kill
+-- **Hàm auto kill**
 function AutoKill()
     while _G.Settings.AutoKill do
         if not CurrentTarget or not CurrentTarget.Character or not CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
@@ -89,13 +90,13 @@ function AutoKill()
         end
         if CurrentTarget then
             if _G.Settings.AutoTeleport then TeleportTo(CurrentTarget) end
-            UseSkills(CurrentTarget)
+            AutoUseEquippedWeapons()
         end
         wait(_G.Settings.KillDelay)
     end
 end
 
--- Hàm né đòn
+-- **Hàm né đòn**
 function AutoDodge()
     while _G.Settings.AutoDodge do
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -106,7 +107,7 @@ function AutoDodge()
     end
 end
 
--- Hàm đổi server
+-- **Hàm đổi server**
 function ServerHop()
     while _G.Settings.AutoServerHop do
         local players = #Players:GetPlayers()
@@ -118,17 +119,17 @@ function ServerHop()
     end
 end
 
--- Hàm tự động bật V4
+-- **Hàm tự động bật V4**
 function AutoAwakenV4()
     while _G.Settings.AutoAwakenV4 do
         if LocalPlayer.Character:FindFirstChild("AwakeningV4") == nil then
-            game:GetService("VirtualInputManager"):SendKeyEvent(true, "T", false, game)
+            VirtualInputManager:SendKeyEvent(true, "T", false, game)
         end
         wait(5)
     end
 end
 
--- Chạy script
+-- **Chạy script**
 spawn(AutoSelectPirates)
 spawn(AutoKill)
 spawn(AutoDodge)
